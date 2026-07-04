@@ -1,0 +1,119 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id            String      @id @default(uuid())
+  email         String?     @unique
+  phoneNumber   String      @unique // Acts as WhatsApp number for login
+  passwordHash  String
+  role          String      @default("PATIENT") // "PATIENT" | "DOCTOR" | "ADMIN"
+  name          String
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  auditLogs     AuditLog[]
+}
+
+model Doctor {
+  id            String        @id @default(uuid())
+  name          String
+  specialty     String
+  email         String        @unique
+  workingHours  String        @default("10:00-18:00") // Format "HH:MM-HH:MM"
+  lunchBreak    String        @default("13:00-14:00") // Format "HH:MM-HH:MM"
+  maxDailyBookings Int        @default(12)
+  appointments  Appointment[]
+}
+
+model Patient {
+  id             String        @id @default(uuid())
+  whatsappNumber String
+  name           String
+  age            Int
+  gender         String
+  createdAt      DateTime      @default(now())
+  appointments   Appointment[]
+  conversations  Conversation[]
+
+  @@index([whatsappNumber])
+}
+
+model Appointment {
+  id                  String            @id @default(uuid())
+  patientId           String
+  patient             Patient           @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  doctorId            String
+  doctor              Doctor            @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  whatsappNumber      String
+  date                String            // Format YYYY-MM-DD
+  time                String            // Format HH:MM
+  paymentMethod       String            // "STRIPE" | "CASH"
+  paymentStatus       String            @default("PENDING") // "PENDING" | "PAID" | "REFUNDED"
+  status              String            @default("CONFIRMED") // "CONFIRMED" | "CANCELLED"
+  stripePaymentIntent String?
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+  payment             Payment?
+  notifications       Notification[]
+
+  @@index([date, time])
+  @@index([whatsappNumber])
+}
+
+model Payment {
+  id              String        @id @default(uuid())
+  appointmentId   String        @unique
+  appointment     Appointment   @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+  amount          Int           // In cents (e.g. 5000 = $50.00)
+  currency        String        @default("usd")
+  status          String        @default("PENDING") // "PENDING" | "PAID" | "REFUNDED"
+  method          String        // "STRIPE" | "CASH"
+  stripeSessionId String?
+  refundId        String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+}
+
+model Notification {
+  id            String             @id @default(uuid())
+  appointmentId String
+  appointment   Appointment        @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+  type          String             // "REMINDER" | "CONFIRMATION" | "CANCELLATION"
+  recipientNo   String
+  messageBody   String
+  status        String             @default("QUEUED") // "QUEUED" | "SENT" | "FAILED"
+  sentAt        DateTime?
+  createdAt     DateTime           @default(now())
+}
+
+model Conversation {
+  id             String   @id @default(uuid())
+  patientId      String?
+  patient        Patient? @relation(fields: [patientId], references: [id], onDelete: SetNull)
+  whatsappNumber String
+  role           String   // "user" | "model"
+  message        String
+  timestamp      DateTime @default(now())
+
+  @@index([whatsappNumber])
+}
+
+model AuditLog {
+  id          String   @id @default(uuid())
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action      String   // E.g., "CANCEL_APPOINTMENT", "UPDATE_CONFIG"
+  details     String   // Serialized JSON
+  ipAddress   String?
+  createdAt   DateTime @default(now())
+}
+
+model Config {
+  key   String @id
+  value String
+}

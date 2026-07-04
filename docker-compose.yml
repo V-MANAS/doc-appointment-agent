@@ -1,0 +1,37 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "5000:5000"
+    environment:
+      - NODE_ENV=production
+      - PORT=5000
+      - DATABASE_URL=file:/app/data/dev.db
+      - JWT_SECRET=clinic-appointment-booking-secret-key-2026
+      - CORS_ORIGIN=http://localhost:5173
+      - GEMINI_API_KEY=AIzaSyYourGeminiAPIKeyHere
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - USE_SIMULATED_REDIS=false
+      - USE_MOCK_GEMINI=true # Set to false and provide GEMINI_API_KEY to activate AI Agent
+    volumes:
+      - clinic_data:/app/data
+    depends_on:
+      - redis
+    restart: always
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: always
+
+volumes:
+  clinic_data:
+  redis_data:

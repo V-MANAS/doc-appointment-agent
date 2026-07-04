@@ -1,0 +1,91 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* HSL curated variables for royal midnight theme */
+  --background: #060814;
+  --foreground: #f8fafc;
+  
+  --primary: #6366f1; /* Indigo purple */
+  --primary-foreground: #ffffff;
+  
+  --card: #0c0f24;
+  --card-foreground: #f1f5f9;
+  --card-border: rgba(255, 255, 255, 0.08);
+  
+  --accent: #a855f7; /* Purple accents */
+  --accent-foreground: #ffffff;
+  
+  --success: #10b981; /* Emerald green */
+  --success-foreground: #ffffff;
+
+  --muted: #64748b;
+  --muted-foreground: #94a3b8;
+  
+  --radius: 12px;
+}
+
+body {
+  margin: 0;
+  font-family: 'Inter', sans-serif;
+  background-color: var(--background);
+  color: var(--foreground);
+  overflow-x: hidden;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Outfit', sans-serif;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--background);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+/* Real-Time Sheet Flash Effect */
+@keyframes insert-flash {
+  0% { background-color: rgba(99, 102, 241, 0.4); }
+  100% { background-color: transparent; }
+}
+
+@keyframes update-flash {
+  0% { background-color: rgba(16, 185, 129, 0.4); }
+  100% { background-color: transparent; }
+}
+
+.animate-insert {
+  animation: insert-flash 1.5s ease-out;
+}
+
+.animate-update {
+  animation: update-flash 1.5s ease-out;
+}
+
+/* Chat bubble entries */
+.chat-enter {
+  opacity: 0;
+  transform: translateY(10px);
+}
+
+.chat-enter-active {
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 300ms ease, transform 300ms ease;
+}
