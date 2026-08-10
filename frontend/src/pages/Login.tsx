@@ -94,8 +94,10 @@ export const Login: React.FC = () => {
         if (success) {
           // Redirect based on role
           const currentUser = useAuthStore.getState().user;
-          if (currentUser?.role === 'ADMIN' || currentUser?.role === 'DOCTOR') {
-            navigate('/dashboard');
+          if (currentUser?.role === 'ADMIN') {
+            navigate('/admin/dashboard');
+          } else if (currentUser?.role === 'DOCTOR') {
+            navigate('/doctor/dashboard');
           } else {
             navigate('/chat');
           }

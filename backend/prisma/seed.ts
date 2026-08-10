@@ -29,6 +29,25 @@ async function main() {
     console.log('ℹ️ Admin account already exists.');
   }
 
+  // 1.5 Create Default Doctor User
+  const doctorPhone = '9876543211';
+  const existingDocUser = await prisma.user.findUnique({ where: { phoneNumber: doctorPhone } });
+  if (!existingDocUser) {
+    const passwordHash = await bcrypt.hash('password123', 10);
+    await prisma.user.create({
+      data: {
+        name: 'Dr. Gregory House',
+        phoneNumber: doctorPhone,
+        email: 'house@clinic.com',
+        passwordHash,
+        role: 'DOCTOR',
+      },
+    });
+    console.log(`✅ Doctor User account created. Phone: ${doctorPhone} | Password: password123`);
+  } else {
+    console.log('ℹ️ Doctor User account already exists.');
+  }
+
   // 2. Create Default Doctor
   const doctorEmail = 'house@clinic.com';
   const existingDoc = await prisma.doctor.findUnique({ where: { email: doctorEmail } });
@@ -67,6 +86,83 @@ async function main() {
     });
   }
   console.log('✅ Default configurations seeded.');
+
+  // 4. Seed Completed Patient Consultation History
+  const patientPhone = '1111111111';
+  let patient = await prisma.patient.findFirst({ where: { whatsappNumber: patientPhone } });
+  if (!patient) {
+    patient = await prisma.patient.create({
+      data: {
+        name: 'John Doe',
+        whatsappNumber: patientPhone,
+        age: 35,
+        gender: 'Male',
+      },
+    });
+  }
+
+  const apptDate = '2026-07-03';
+  let appt = await prisma.appointment.findFirst({
+    where: { patientId: patient.id, date: apptDate },
+  });
+
+  if (!appt) {
+    appt = await prisma.appointment.create({
+      data: {
+        patientId: patient.id,
+        doctorId: doctorId,
+        whatsappNumber: patientPhone,
+        date: apptDate,
+        time: '10:00',
+        paymentMethod: 'CASH',
+        paymentStatus: 'PAID',
+        status: 'COMPLETED',
+      },
+    });
+  }
+
+  let consultation = await prisma.consultation.findUnique({
+    where: { appointmentId: appt.id },
+  });
+
+  if (!consultation) {
+    consultation = await prisma.consultation.create({
+      data: {
+        appointmentId: appt.id,
+        doctorId: doctorId,
+        patientId: patient.id,
+        chiefComplaint: 'Severe chronic migraines and occasional blurred vision.',
+        diagnosis: 'Tension-type headaches exacerbated by sleep apnea.',
+        doctorNotes: 'Advised lifestyle modification, limited screen usage, and 8 hours sleep.',
+        followUpDate: '2026-07-15',
+      },
+    });
+
+    // Seed prescriptions
+    await prisma.prescription.create({
+      data: {
+        consultationId: consultation.id,
+        medicineName: 'Sumatriptan',
+        dosage: '50mg',
+        frequency: '1-0-0',
+        duration: '10 days',
+        instructions: 'Take at onset of migraine.',
+      },
+    });
+
+    await prisma.prescription.create({
+      data: {
+        consultationId: consultation.id,
+        medicineName: 'Magnesium Glycinate',
+        dosage: '400mg',
+        frequency: '0-0-1',
+        duration: '30 days',
+        instructions: 'Take before sleeping with warm water.',
+      },
+    });
+    console.log('✅ Completed consultation and prescriptions history seeded.');
+  }
+
   console.log('🌱 Seeding finished successfully!');
 }
 

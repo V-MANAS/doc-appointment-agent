@@ -54,21 +54,27 @@ export class AppointmentsService {
     }
 
     // 3. Create appointment
-    const appointment = await prisma.appointment.create({
-      data: {
-        patientId: data.patientId,
-        doctorId,
-        whatsappNumber: data.whatsappNumber,
-        date: data.date,
-        time: data.time,
-        paymentMethod: data.paymentMethod,
-        paymentStatus: 'PENDING',
-        status: 'CONFIRMED',
-      },
-      include: { patient: true, doctor: true },
-    });
-
-    logger.info(`Appointment booked successfully: ${appointment.id}`);
+    logger.info(`Prisma create() started for Patient: ${data.patientId}, Doctor: ${doctorId}, Date: ${data.date}, Time: ${data.time}`);
+    let appointment;
+    try {
+      appointment = await prisma.appointment.create({
+        data: {
+          patientId: data.patientId,
+          doctorId,
+          whatsappNumber: data.whatsappNumber,
+          date: data.date,
+          time: data.time,
+          paymentMethod: data.paymentMethod,
+          paymentStatus: 'PENDING',
+          status: 'CONFIRMED',
+        },
+        include: { patient: true, doctor: true },
+      });
+      logger.info(`Prisma create() committed successfully. Generated Appointment ID: ${appointment.id}`);
+    } catch (error: any) {
+      logger.error(`Prisma create() failed to commit transaction: ${error.message}`, error);
+      throw error;
+    }
 
     // Real-time synchronization
     broadcastEvent('dashboard:update', { type: 'APPOINTMENT_CREATED', appointment });

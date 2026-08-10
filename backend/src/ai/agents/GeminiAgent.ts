@@ -262,8 +262,8 @@ export class GeminiAgent {
         const selectedSlot = slots[optionIdx];
         
         // Extract selected date from history
-        const prevBotMsg = history.filter(h => h.role === 'model').slice(-2)[0]?.message || '';
-        const dateMatch = prevBotMsg.match(/date: (\d{4}-\d{2}-\d{2})/);
+        const prevBotMsg = history.filter(h => h.role === 'model').slice(-1)[0]?.message || '';
+        const dateMatch = prevBotMsg.match(/date: (\d{4}-\d{2}-\d{2})/i);
         const selectedDate = dateMatch ? dateMatch[1] : new Date().toLocaleDateString('en-CA');
 
         return `Selected Time: ${selectedSlot} on Date: ${selectedDate}\n\nHow would you like to pay?\n\n1. Online (Stripe)\n2. Cash at Clinic`;
@@ -281,9 +281,9 @@ export class GeminiAgent {
 
       if (method) {
         // Resolve patient, date, slot from history
-        const slotsMsg = history.filter(h => h.role === 'model').slice(-2)[0]?.message || '';
-        const timeMatch = slotsMsg.match(/Selected Time: (\d{2}:\d{2})/);
-        const dateMatch = slotsMsg.match(/Date: (\d{4}-\d{2}-\d{2})/);
+        const slotsMsg = history.filter(h => h.role === 'model').slice(-1)[0]?.message || '';
+        const timeMatch = slotsMsg.match(/Selected Time: (\d{2}:\d{2})/i);
+        const dateMatch = slotsMsg.match(/Date: (\d{4}-\d{2}-\d{2})/i);
         const time = timeMatch ? timeMatch[1] : '10:00';
         const date = dateMatch ? dateMatch[1] : new Date().toLocaleDateString('en-CA');
 
@@ -299,8 +299,12 @@ export class GeminiAgent {
           payment_method: method,
         });
 
+        if (appt.error || !appt.id) {
+          return `Booking Failed: ${appt.error || 'Could not save appointment to database.'}\n\nPlease try again or select another time slot.`;
+        }
+
         if (method === 'STRIPE') {
-          return `Appointment Booked!\n\nPatient Name: ${patient.name}\nDate: ${date}\nTime: ${time}\nPayment Method: Stripe\nPayment Status: Pending\nStatus: Confirmed\n\nPlease click this link to pay: http://localhost:5000/api/v1/payments/checkout-session (A payment session has been created for appointment ID: ${appt.id})`;
+          return `Appointment Booked!\n\nPatient Name: ${patient.name}\nDate: ${date}\nTime: ${time}\nPayment Method: Stripe\nPayment Status: Pending\nStatus: Confirmed\n\nPlease click this link to pay: http://localhost:5000/api/v1/payments/checkout-session?appointmentId=${appt.id} (A payment session has been created for appointment ID: ${appt.id})`;
         } else {
           return `Appointment Booked!\n\nPatient Name: ${patient.name}\nDate: ${date}\nTime: ${time}\nPayment Method: Cash at Clinic\nPayment Status: Pending\nStatus: Confirmed\n\nYour appointment is confirmed. Thank you!`;
         }
@@ -323,7 +327,7 @@ export class GeminiAgent {
           dates.push(d.toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' }));
         }
         const datesList = dates.map((d, idx) => `${idx + 1}. ${d}`).join('\n');
-        return `Rescheduling Appointment ID: ${appt.id.slice(0, 8)}\n\nWhich new date would you like to select?\n\n${datesList}`;
+        return `Rescheduling Appointment ID: ${appt.id}\n\nWhich new date would you like to select?\n\n${datesList}`;
       }
     }
 
@@ -365,12 +369,15 @@ export class GeminiAgent {
           const appts = await registry.executeTool('get_user_appointments', { whatsapp_number: whatsappNumber });
           const appt = appts.find((a: any) => a.id.startsWith(apptId) || a.id === apptId);
           if (appt) {
-            await registry.executeTool('reschedule_appointment', {
+            const res = await registry.executeTool('reschedule_appointment', {
               appointment_id: appt.id,
               date,
               time: selectedSlot
             });
-            return `Success! Appointment rescheduled.\n\nNew Schedule:\nDate: ${date}\nTime: ${selectedSlot}\nAppointment ID: ${appt.id.slice(0, 8)}`;
+            if (res.error) {
+              return `Rescheduling Failed: ${res.error}\n\nPlease try again or select another time slot.`;
+            }
+            return `Success! Appointment rescheduled.\n\nNew Schedule:\nDate: ${date}\nTime: ${selectedSlot}\nAppointment ID: ${appt.id}`;
           }
         }
         return `Failed to find your original appointment. Please start over by replying "menu".`;
@@ -384,8 +391,11 @@ export class GeminiAgent {
       const confirmed = appts ? appts.filter((a: any) => a.status === 'CONFIRMED') : [];
       if (confirmed && optionIdx >= 0 && optionIdx < confirmed.length) {
         const appt = confirmed[optionIdx];
-        await registry.executeTool('cancel_appointment', { appointment_id: appt.id });
-        return `Your appointment on date ${appt.date} at ${appt.time} (ID: ${appt.id.slice(0, 8)}) has been cancelled successfully.`;
+        const res = await registry.executeTool('cancel_appointment', { appointment_id: appt.id });
+        if (res.error) {
+          return `Cancellation Failed: ${res.error}\n\nPlease try again.`;
+        }
+        return `Your appointment on date ${appt.date} at ${appt.time} (ID: ${appt.id}) has been cancelled successfully.`;
       }
     }
 

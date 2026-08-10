@@ -14,6 +14,8 @@ import doctorsRouter from './modules/doctors/routes';
 import paymentsRouter from './modules/payments/routes';
 import chatRouter from './modules/chat/routes';
 import analyticsRouter from './modules/analytics/routes';
+import adminRouter from './modules/admin/routes';
+import consultationsRouter from './modules/consultations/routes';
 
 const app = express();
 
@@ -23,8 +25,11 @@ app.use(helmet());
 // Cross-Origin Resource Sharing
 app.use(
   cors({
-    origin: env.CORS_ORIGIN,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    origin: [
+      "http://localhost:5173",
+      "http://localhost:5174",
+    ],
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     credentials: true,
   })
 );
@@ -68,6 +73,8 @@ app.use('/api/v1/doctors', doctorsRouter);
 app.use('/api/v1/payments', paymentsRouter);
 app.use('/api/v1/chat', chatRouter);
 app.use('/api/v1/analytics', analyticsRouter);
+app.use('/api/v1/admin', adminRouter);
+app.use('/api/v1/consultation', consultationsRouter);
 
 // Global Error Handler
 app.use(errorHandler);
